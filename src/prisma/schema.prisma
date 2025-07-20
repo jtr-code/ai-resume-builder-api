@@ -30,7 +30,7 @@ model Resume {
   contacts       Contact[]
   educations     Education[]
   experiences    Experience[]
-  user           User            @relation(fields: [userId], references: [id])
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   skills         Skill[]
 
   @@map("resumes")
@@ -52,7 +52,7 @@ model Contact {
   website   String
   dob       DateTime
   resumeId  String?
-  resume    Resume?  @relation(fields: [resumeId], references: [id])
+  resume    Resume?  @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@map("contacts")
 }
@@ -70,7 +70,7 @@ model Experience {
   endYear           Int?
   currentlyWorkHere Boolean
   resumeId          String
-  resume            Resume  @relation(fields: [resumeId], references: [id])
+  resume            Resume  @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@map("experiences")
 }
@@ -84,7 +84,7 @@ model Education {
   graduationMonth Int
   graduationYear  Int
   resumeId        String
-  resume          Resume @relation(fields: [resumeId], references: [id])
+  resume          Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@map("educations")
 }
@@ -96,7 +96,7 @@ model Certification {
   issueDate  DateTime
   expiryDate DateTime?
   resumeId   String
-  resume     Resume    @relation(fields: [resumeId], references: [id])
+  resume     Resume    @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@map("certifications")
 }
@@ -106,7 +106,7 @@ model Skill {
   name        String
   proficiency Proficiency
   resumeId    String
-  resume      Resume      @relation(fields: [resumeId], references: [id])
+  resume      Resume      @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@map("skills")
 }
