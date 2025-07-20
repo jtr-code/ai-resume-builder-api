@@ -1,14 +1,118 @@
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id    Int    @id @default(autoincrement())
-  name  String
-  email String @unique
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  resumes   Resume[]
+
+  @@map("users")
+}
+
+model Resume {
+  id             String          @id @default(uuid())
+  userId         String
+  title          String
+  summary        String
+  templateStyle  String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  certifications Certification[]
+  contacts       Contact[]
+  educations     Education[]
+  experiences    Experience[]
+  user           User            @relation(fields: [userId], references: [id])
+  skills         Skill[]
+
+  @@map("resumes")
+}
+
+model Contact {
+  id        String   @id @default(uuid())
+  image     String
+  firstName String
+  lastName  String
+  jobTitle  String
+  phone     String
+  country   String
+  city      String
+  state     String
+  email     String
+  pincode   String
+  linkedin  String
+  website   String
+  dob       DateTime
+  resumeId  String?
+  resume    Resume?  @relation(fields: [resumeId], references: [id])
+
+  @@map("contacts")
+}
+
+model Experience {
+  id                String  @id @default(uuid())
+  jobTitle          String
+  companyName       String
+  country           String
+  city              String
+  state             String
+  startMonth        Int
+  startYear         Int
+  endMonth          Int?
+  endYear           Int?
+  currentlyWorkHere Boolean
+  resumeId          String
+  resume            Resume  @relation(fields: [resumeId], references: [id])
+
+  @@map("experiences")
+}
+
+model Education {
+  id              String @id @default(uuid())
+  schoolName      String
+  schoolLocation  String
+  degreeOrProgram String
+  fieldOfStudy    String
+  graduationMonth Int
+  graduationYear  Int
+  resumeId        String
+  resume          Resume @relation(fields: [resumeId], references: [id])
+
+  @@map("educations")
+}
+
+model Certification {
+  id         String    @id @default(uuid())
+  name       String
+  issuer     String
+  issueDate  DateTime
+  expiryDate DateTime?
+  resumeId   String
+  resume     Resume    @relation(fields: [resumeId], references: [id])
+
+  @@map("certifications")
+}
+
+model Skill {
+  id          String      @id @default(uuid())
+  name        String
+  proficiency Proficiency
+  resumeId    String
+  resume      Resume      @relation(fields: [resumeId], references: [id])
+
+  @@map("skills")
+}
+
+enum Proficiency {
+  Beginner
+  Intermediate
+  Advanced
 }
