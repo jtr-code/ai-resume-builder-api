@@ -13,9 +13,11 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(cookieParser());
 
 // routes import
-import { getHealthCheck } from "./controllers/health.controller";
+import healthRoutes from "./routes/health.route";
+import userRoutes from "./routes/user.route";
 
 // api routes
-app.use("/api/health", getHealthCheck);
+app.use("/api/v1/health", healthRoutes);
+app.use("/api/v1/user", userRoutes);
 
 export { app };
