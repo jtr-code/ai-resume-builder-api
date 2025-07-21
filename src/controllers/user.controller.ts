@@ -1,8 +1,103 @@
 import { PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
+import expressAsyncHandler from "express-async-handler";
+import createHttpError from "http-errors";
+import { ApiResponse } from "../utils/apiResponse";
 
 const prisma = new PrismaClient();
+
+export const registerUser = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    const { name, email, password } = req.body;
+
+    if (!name || typeof name !== "string" || name.trim() === "") {
+      throw createHttpError(422, "Valid name is required");
+    }
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw createHttpError(422, "Valid email is required");
+    }
+
+    if (!password || typeof password !== "string" || password.length < 8) {
+      throw createHttpError(422, "Password must be at least 8 characters");
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      throw createHttpError(409, "User already exists");
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: email.toLowerCase(),
+        password: hashedPassword,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+      },
+    });
+
+    res
+      .status(201)
+      .json(new ApiResponse(201, { newUser }, "User registered successfully"));
+  }
+);
+
+export const loginUser = expressAsyncHandler(async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    throw createHttpError(400, "Email and password are required");
+  }
+
+  if (typeof email !== "string" || typeof password !== "string") {
+    throw createHttpError(422, "Email and password must be strings");
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email.trim())) {
+    throw createHttpError(422, "Invalid email format");
+  }
+
+  if (password.length < 8) {
+    throw createHttpError(400, "Password must be at least 8 characters long");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: email.trim() },
+  });
+
+  if (!user) {
+    throw createHttpError(401, "Invalid email or password");
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+
+  if (!isPasswordValid) {
+    throw createHttpError(401, "Invalid email or password");
+  }
+
+  const { password: _, ...safeUser } = user;
+
+  // const token = generateJwtToken(user);
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, { user: safeUser }, "User logged successfully"));
+});
+
+export const getCurrentUser = () => {};
+export const logoutUser = () => {};
+export const refreshAccessToken = () => {};
+export const changeCurrentPassword = () => {};
+export const updateAccountDetails = () => {};
 
 export const getUser = async (req: Request, res: Response) => {
   try {
@@ -63,69 +158,6 @@ export const getUserById = async (req: Request, res: Response) => {
       message: "User retrieved successfully",
     });
   } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-export const addNewUser = async (req: Request, res: Response) => {
-  try {
-    const { name, email, password } = req.body;
-
-    if (!name || typeof name !== "string" || name.trim() === "") {
-      res.status(422).json({
-        success: false,
-        message: "Valid name is required",
-      });
-    }
-
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      res.status(422).json({
-        success: false,
-        message: "Valid email is required",
-      });
-    }
-
-    if (!password || typeof password !== "string" || password.length < 8) {
-      res.status(422).json({
-        success: false,
-        message: "Password must be at least 8 characters",
-      });
-    }
-
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-
-    if (existingUser) {
-      res.status(409).json({
-        success: false,
-        message: "User already exists",
-      });
-    }
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = await prisma.user.create({
-      data: {
-        name: name.trim(),
-        email: email.toLowerCase(),
-        password: hashedPassword,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        createdAt: true,
-      },
-    });
-
-    res.status(201).json({
-      success: true,
-      newUser,
-      message: "User created successfully",
-    });
-  } catch (error) {
-    console.error("Error creating user:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
