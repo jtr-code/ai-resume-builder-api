@@ -4,6 +4,8 @@ import bcrypt from "bcrypt";
 import expressAsyncHandler from "express-async-handler";
 import createHttpError from "http-errors";
 import { ApiResponse } from "../utils/apiResponse";
+import jwt from "jsonwebtoken";
+import { generateAccessAndRefreshToken } from "../utils/generateAccessAndRefreshToken";
 
 const prisma = new PrismaClient();
 
@@ -11,91 +13,171 @@ export const registerUser = expressAsyncHandler(
   async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
 
-    if (!name || typeof name !== "string" || name.trim() === "") {
-      throw createHttpError(422, "Valid name is required");
-    }
-
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw createHttpError(422, "Valid email is required");
-    }
-
-    if (!password || typeof password !== "string" || password.length < 8) {
-      throw createHttpError(422, "Password must be at least 8 characters");
-    }
+    if (!name || !email || !password)
+      throw createHttpError(422, "All fields required");
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      throw createHttpError(409, "User already exists");
-    }
+    if (existingUser) throw createHttpError(409, "User already exists");
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = await prisma.user.create({
+    const createdUser = await prisma.user.create({
       data: {
-        name: name.trim(),
+        name,
         email: email.toLowerCase(),
         password: hashedPassword,
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        createdAt: true,
-      },
+    });
+
+    const { accessToken, refreshToken } = generateAccessAndRefreshToken(
+      createdUser.id
+    );
+
+    await prisma.user.update({
+      where: { id: createdUser.id },
+      data: { refreshToken },
     });
 
     res
+      .cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 15 * 60 * 1000,
+      })
+      .cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      })
       .status(201)
-      .json(new ApiResponse(201, { newUser }, "User registered successfully"));
+      .json(
+        new ApiResponse(
+          201,
+          {
+            user: {
+              id: createdUser.id,
+              name: createdUser.name,
+              email: createdUser.email,
+              createdAt: createdUser.createdAt,
+            },
+          },
+          "User registered successfully"
+        )
+      );
   }
 );
 
 export const loginUser = expressAsyncHandler(async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    throw createHttpError(400, "Email and password are required");
-  }
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) throw createHttpError(401, "Invalid credentials");
 
-  if (typeof email !== "string" || typeof password !== "string") {
-    throw createHttpError(422, "Email and password must be strings");
-  }
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) throw createHttpError(401, "Invalid credentials");
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email.trim())) {
-    throw createHttpError(422, "Invalid email format");
-  }
+  const { accessToken, refreshToken } = generateAccessAndRefreshToken(user.id);
 
-  if (password.length < 8) {
-    throw createHttpError(400, "Password must be at least 8 characters long");
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { email: email.trim() },
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { refreshToken },
   });
 
-  if (!user) {
-    throw createHttpError(401, "Invalid email or password");
-  }
-
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-
-  if (!isPasswordValid) {
-    throw createHttpError(401, "Invalid email or password");
-  }
-
-  const { password: _, ...safeUser } = user;
-
-  // const token = generateJwtToken(user);
-
   res
+    .cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000,
+    })
+    .cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    })
     .status(200)
-    .json(new ApiResponse(200, { user: safeUser }, "User logged successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        {
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            createdAt: user.createdAt,
+          },
+        },
+        "User logged successfully"
+      )
+    );
 });
 
+export const logoutUser = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) throw createHttpError(401, "Unauthorized");
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken: null },
+    });
+
+    res
+      .clearCookie("accessToken")
+      .clearCookie("refreshToken")
+      .status(200)
+      .json(new ApiResponse(200, {}, "User logged out successfully"));
+  }
+);
+
+export const refreshAccessToken = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    const incomingToken = req.cookies?.refreshToken;
+    if (!incomingToken) throw createHttpError(401, "Refresh token missing");
+
+    let decoded;
+    try {
+      decoded = jwt.verify(incomingToken, process.env.REFRESH_TOKEN_SECRET!);
+    } catch {
+      throw createHttpError(401, "Invalid refresh token");
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: (decoded as any).id },
+    });
+    if (!user || user.refreshToken !== incomingToken) {
+      throw createHttpError(401, "Refresh token expired or invalid");
+    }
+
+    const { accessToken, refreshToken } = generateAccessAndRefreshToken(user.id);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken },
+    });
+
+    res
+      .cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 15 * 60 * 1000,
+      })
+      .cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      })
+      .status(200)
+      .json(new ApiResponse(200, {}, "Access token refreshed"));
+  }
+);
+
 export const getCurrentUser = () => {};
-export const logoutUser = () => {};
-export const refreshAccessToken = () => {};
 export const changeCurrentPassword = () => {};
 export const updateAccountDetails = () => {};
 
