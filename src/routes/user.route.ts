@@ -12,6 +12,7 @@ import {
   changeCurrentPassword,
   updateAccountDetails,
 } from "../controllers/user.controller";
+import { verifyJWT } from "../middlewares/auth.middleware";
 
 const router = Router();
 
@@ -22,10 +23,11 @@ router.delete("/:id", deleteUserById);
 
 router.post("/login", loginUser);
 router.post("/register", registerUser);
-router.get("/me", getCurrentUser);
-router.post("/refresh", refreshAccessToken);
+router.get("/me", verifyJWT, getCurrentUser);
+router.post("/refresh-token", refreshAccessToken);
 router.post("/change-password", changeCurrentPassword);
 router.patch("/update-account", updateAccountDetails);
-router.post("/logout", logoutUser);
+// secured route
+router.post("/logout", verifyJWT, logoutUser);
 
 export default router;
