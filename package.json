@@ -31,7 +31,8 @@
     "express-rate-limit": "^8.0.1",
     "helmet": "^8.1.0",
     "http-errors": "^2.0.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^4.0.5"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
