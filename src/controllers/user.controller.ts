@@ -177,8 +177,118 @@ export const refreshAccessToken = expressAsyncHandler(
   }
 );
 
-export const changeCurrentPassword = () => {};
-export const updateAccountDetails = () => {};
+export const forgotPassword = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    if (!email) throw createHttpError(400, "Email is required");
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw createHttpError(404, "User not found");
+
+    const resetToken = jwt.sign(
+      { id: user.id },
+      process.env.RESET_PASSWORD_SECRET!,
+      {
+        expiresIn: "15m",
+      }
+    );
+
+    const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+
+    // TODO: send email using nodemailer/sendgrid/etc.
+    console.log(" Reset link:", resetLink);
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Reset link sent to email (mocked)"));
+  }
+);
+
+export const resetPassword = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    const { token } = req.params;
+    const { newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      throw createHttpError(400, "Token and new password are required");
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.RESET_PASSWORD_SECRET!) as {
+        id: string;
+      };
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      await prisma.user.update({
+        where: { id: decoded.id },
+        data: { password: hashedPassword },
+      });
+
+      res.status(200).json(new ApiResponse(200, {}, "Password reset successfully"));
+    } catch (err) {
+      throw createHttpError(400, "Invalid or expired token");
+    }
+  }
+);
+
+export const changeCurrentPassword = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user?.id;
+
+    if (!oldPassword || !newPassword) {
+      throw createHttpError(400, "Old and new passwords are required");
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw createHttpError(404, "User not found");
+
+    const isValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isValid) throw createHttpError(401, "Old password is incorrect");
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed },
+    });
+
+    res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"));
+  }
+);
+
+export const updateAccountDetails = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    const { name, email } = req.body;
+
+    if (!name && !email) {
+      throw createHttpError(422, "Please provide name and email");
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: name?.trim(),
+        email: email?.toLowerCase(),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+      },
+    });
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, { user: updatedUser }, "Account updated successfully")
+      );
+  }
+);
 
 export const getUser = async (req: Request, res: Response) => {
   try {
