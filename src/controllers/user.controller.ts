@@ -177,7 +177,6 @@ export const refreshAccessToken = expressAsyncHandler(
   }
 );
 
-export const getCurrentUser = () => {};
 export const changeCurrentPassword = () => {};
 export const updateAccountDetails = () => {};
 

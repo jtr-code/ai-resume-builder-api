@@ -34,7 +34,6 @@ export const verifyJWT = expressAsyncHandler(
       if (typeof decodedToken === "object" && "id" in decodedToken) {
         userId = (decodedToken as jwt.JwtPayload).id as string;
       }
-      console.log("userId: ", userId);
 
       if (!userId) {
         throw createHttpError(401, "Invalid Access Token");
@@ -45,7 +44,6 @@ export const verifyJWT = expressAsyncHandler(
           id: userId,
         },
       });
-      console.log("user: ", user);
 
       if (!user) {
         throw createHttpError(401, "Invalid Access Token");
