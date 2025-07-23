@@ -10,3 +10,10 @@ export const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+
+export const forgotPasswordLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 mins
+  max: 3,
+  message: "Too many password reset attempts. Try again later.",
+});
