@@ -11,7 +11,6 @@ export const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-
 export const forgotPasswordLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 mins
   max: 3,
