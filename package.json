@@ -5,7 +5,14 @@
   "scripts": {
     "dev": "ts-node-dev src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepare": "husky",
+    "format": "prettier --write ."
+  },
+  "lint-staged": {
+    "**/*.{ts,js,json,md}": [
+      "prettier --write"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -35,6 +42,9 @@
     "@types/helmet": "^0.0.48",
     "@types/http-errors": "^2.0.5",
     "@types/node": "^22.15.24",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.6.2",
     "prisma": "^6.12.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
