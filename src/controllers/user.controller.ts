@@ -14,6 +14,15 @@ export const registerUser = expressAsyncHandler(async (req: Request, res: Respon
 
   if (!name || !email || !password) throw createHttpError(422, "All fields required");
 
+  if (typeof name !== "string" || typeof email !== "string" || typeof password !== "string") {
+    throw createHttpError(422, "All fields must be strings");
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw createHttpError(422, "Invalid email format");
+  }
+
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) throw createHttpError(409, "User already exists");
 
@@ -66,6 +75,23 @@ export const registerUser = expressAsyncHandler(async (req: Request, res: Respon
 
 export const loginUser = expressAsyncHandler(async (req: Request, res: Response) => {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    throw createHttpError(422, "Email and password are required");
+  }
+
+  if (typeof email !== "string" || typeof password !== "string") {
+    throw createHttpError(422, "Email and password must be strings");
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw createHttpError(422, "Invalid email format");
+  }
+
+  if (password.length < 8) {
+    throw createHttpError(422, "Password must be at least 8 characters long");
+  }
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw createHttpError(401, "Invalid credentials");
@@ -220,6 +246,10 @@ export const changeCurrentPassword = expressAsyncHandler(async (req: Request, re
 
   if (!oldPassword || !newPassword) {
     throw createHttpError(400, "Old and new passwords are required");
+  }
+
+  if (typeof newPassword !== "string" || newPassword.trim().length < 8) {
+    throw createHttpError(422, "Password must be a string and at least 8 characters long");
   }
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
