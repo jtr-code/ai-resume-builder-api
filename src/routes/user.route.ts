@@ -1,39 +1,67 @@
 import { Router } from "express";
+import { verifyJWT } from "../middlewares/auth.middleware";
+import { forgotPasswordLimiter } from "../utils/rateLimiter";
 import {
-  deleteUserById,
-  getUser,
-  getUserById,
-  updateUser,
+  userChangeCurrentPasswordValidator,
+  userForgotPasswordValidator,
+  userLoginValidator,
+  userRegisterValidator,
+  userResetForgottenPasswordValidator,
+  userUpdateAccountDetailsValidator,
+} from "../validators/user/user.validators";
+import { validate } from "../validators/validate";
+import {
   loginUser,
   registerUser,
   logoutUser,
   refreshAccessToken,
-  changeCurrentPassword,
-  updateAccountDetails,
   forgotPassword,
   resetPassword,
+  getUser,
+  getUserById,
+  updateUser,
+  deleteUserById,
+  changeCurrentPassword,
+  updateAccountDetails,
 } from "../controllers/user.controller";
-import { verifyJWT } from "../middlewares/auth.middleware";
-import { forgotPasswordLimiter } from "../utils/rateLimiter";
-import { validate } from "../middlewares/validateRequest";
-import { loginSchema, registerSchema } from "../validators/auth.validator";
 
 const router = Router();
 
-router.get("/", getUser);
-router.put("/:id", updateUser);
-router.delete("/:id", deleteUserById);
-
-router.post("/login", validate(loginSchema), loginUser);
-router.post("/register", validate(registerSchema), registerUser);
+// Public routes
+router.post("/login", userLoginValidator(), validate, loginUser);
+router.post("/register", userRegisterValidator(), validate, registerUser);
 router.post("/refresh-token", refreshAccessToken);
-router.post("/forgot-password", forgotPasswordLimiter, forgotPassword);
-router.patch("/reset-password", resetPassword);
 
-// secured route
+router.post(
+  "/forgot-password",
+  forgotPasswordLimiter,
+  userForgotPasswordValidator(),
+  validate,
+  forgotPassword
+);
+router.patch("/reset-password", userResetForgottenPasswordValidator(), validate, resetPassword);
+
+// secured routes
+router.get("/", verifyJWT, getUser);
 router.get("/:id", verifyJWT, getUserById);
-router.patch("/change-password", verifyJWT, changeCurrentPassword);
-router.patch("/update-account", verifyJWT, updateAccountDetails);
+router.put("/:id", verifyJWT, updateUser);
+router.delete("/:id", verifyJWT, deleteUserById);
+
+router.patch(
+  "/change-password",
+  verifyJWT,
+  userChangeCurrentPasswordValidator(),
+  validate,
+  changeCurrentPassword
+);
+
+router.patch(
+  "/update-account",
+  verifyJWT,
+  userUpdateAccountDetailsValidator(),
+  validate,
+  updateAccountDetails
+);
 router.post("/logout", verifyJWT, logoutUser);
 
 export default router;
