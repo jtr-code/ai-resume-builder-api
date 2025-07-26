@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import compression from "compression";
 import { apiLimiter } from "./utils/rateLimiter";
-import { errorHandler } from "./middlewares/errorHandler";
+import { errorHandler } from "./middlewares/error.middleware";
 
 const app = express();
 
