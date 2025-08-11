@@ -53,14 +53,13 @@ model Contact {
   state     String
   email     String
   pincode   String
-  linkedin  String
-  website   String
+  linkedin  String?
+  website   String?
   dob       DateTime
   resumeId  String?
   resume    Resume?  @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@index([resumeId])
-
   @@map("contacts")
 }
 
