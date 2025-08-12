@@ -20,24 +20,23 @@ model User {
 }
 
 model Resume {
-  id             String          @id @default(uuid())
-  userId         String
-  title          String
-  summary        String
-  templateStyle  String
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  certifications Certification[]
-  contacts       Contact[]
-  educations     Education[]
-  experiences    Experience[]
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skills         Skill[]
+  id            String          @id @default(uuid())
+  userId        String
+  title         String
+  summary       String
+  templateStyle String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  certification Certification[]
+  contact       Contact?
+  educations    Education[]
+  experiences   Experience[]
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills        Skill[]
 
   @@index([userId])
   @@index([createdAt])
   @@index([updatedAt])
-
   @@map("resumes")
 }
 
@@ -56,10 +55,9 @@ model Contact {
   linkedin  String?
   website   String?
   dob       DateTime
-  resumeId  String?
-  resume    Resume?  @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId  String   @unique
+    resume    Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
-  @@index([resumeId])
   @@map("contacts")
 }
 
@@ -79,7 +77,6 @@ model Experience {
   resume            Resume  @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@index([resumeId])
-
   @@map("experiences")
 }
 
@@ -95,7 +92,6 @@ model Education {
   resume          Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@index([resumeId])
-
   @@map("educations")
 }
 
@@ -109,7 +105,6 @@ model Certification {
   resume     Resume    @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@index([resumeId])
-
   @@map("certifications")
 }
 
@@ -121,7 +116,6 @@ model Skill {
   resume      Resume      @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@index([resumeId])
-
   @@map("skills")
 }
 
