@@ -56,7 +56,7 @@ model Contact {
   website   String?
   dob       DateTime
   resumeId  String   @unique
-    resume    Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resume    Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@map("contacts")
 }

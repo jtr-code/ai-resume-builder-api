@@ -1,4 +1,4 @@
-import { body, param } from "express-validator";
+import { body } from "express-validator";
 
 const createContactValidator = () => [
   body("email")
@@ -9,11 +9,4 @@ const createContactValidator = () => [
     .withMessage("Email is invalid"),
 ];
 
-const updateContactValidator = () => [
-  param("contactId")
-    .notEmpty()
-    .withMessage("Contact ID is required")
-    .isUUID()
-    .withMessage("Contact ID must be a valid UUID"),
-];
-export { createContactValidator, updateContactValidator };
+export { createContactValidator };

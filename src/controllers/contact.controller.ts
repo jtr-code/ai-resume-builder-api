@@ -21,18 +21,15 @@ export const createContact = expressAsyncHandler(async (req: Request, res: Respo
     linkedin,
     website,
     dob,
-    userId,
   } = req.body;
 
-  if (!email) {
-    throw createHttpError(422, "Please provide email");
-  }
-  if (!userId) {
-    throw createHttpError(401, "Unauthorized");
-  }
+  const userId = req.user?.id;
+  if (!userId) throw createHttpError(401, "Unauthorized");
+  if (!email) throw createHttpError(422, "Please provide email");
 
   let resume = await prisma.resume.findFirst({
     where: { userId },
+    include: { contact: true },
   });
 
   if (!resume) {
@@ -43,7 +40,30 @@ export const createContact = expressAsyncHandler(async (req: Request, res: Respo
         summary: "",
         templateStyle: "default",
       },
+      include: { contact: true },
     });
+  }
+
+  if (resume.contact) {
+    const updatedContact = await prisma.contact.update({
+      where: { id: resume.contact.id },
+      data: {
+        firstName,
+        lastName,
+        image,
+        jobTitle,
+        phone,
+        country,
+        city,
+        state,
+        email,
+        pincode,
+        linkedin,
+        website,
+        dob,
+      },
+    });
+    res.status(200).json(new ApiResponse(200, updatedContact, "Contact updated successfully"));
   }
 
   const contact = await prisma.contact.create({
@@ -69,57 +89,17 @@ export const createContact = expressAsyncHandler(async (req: Request, res: Respo
 });
 
 export const getContactDetails = expressAsyncHandler(async (req: Request, res: Response) => {
-  const { userId } = req.body;
+  const userId = req.user?.id;
   if (!userId) throw createHttpError(401, "Unauthorized");
 
   const resume = await prisma.resume.findFirst({
     where: { userId },
-    include: { contacts: true },
+    include: { contact: true },
   });
 
-  if (!resume || resume.contacts.length === 0) {
-    throw createHttpError(404, "No contacts found");
+  if (!resume || !resume.contact) {
+    throw createHttpError(404, "No contact found");
   }
 
-  res.status(200).json(new ApiResponse(200, resume.contacts, "Contacts retrieved successfully"));
-});
-
-export const updateContact = expressAsyncHandler(async (req: Request, res: Response) => {
-  const { contactId } = req.params;
-  const {
-    firstName,
-    lastName,
-    image,
-    jobTitle,
-    phone,
-    country,
-    city,
-    state,
-    email,
-    pincode,
-    linkedin,
-    website,
-    dob,
-  } = req.body;
-
-  const contact = await prisma.contact.update({
-    where: { id: contactId },
-    data: {
-      firstName,
-      lastName,
-      image,
-      jobTitle,
-      phone,
-      country,
-      city,
-      state,
-      email,
-      pincode,
-      linkedin,
-      website,
-      dob,
-    },
-  });
-
-  res.status(200).json(new ApiResponse(200, contact, "Contact updated successfully"));
+  res.status(200).json(new ApiResponse(200, resume.contact, "Contact retrieved successfully"));
 });
