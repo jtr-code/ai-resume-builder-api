@@ -21,11 +21,13 @@ app.use(apiLimiter);
 import healthRoutes from "./routes/health.route";
 import userRoutes from "./routes/user.route";
 import contactRoutes from "./routes/contact.route";
+import experienceRoutes from "./routes/experience.route";
 
 // api routes
 app.use("/api/v1/health", healthRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/contact", contactRoutes);
+app.use("/api/v1/experience", experienceRoutes);
 
 app.use(errorHandler);
 
