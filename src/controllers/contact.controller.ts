@@ -103,3 +103,23 @@ export const getContactDetails = expressAsyncHandler(async (req: Request, res: R
 
   res.status(200).json(new ApiResponse(200, resume.contact, "Contact retrieved successfully"));
 });
+
+export const deleteContact = expressAsyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) throw createHttpError(401, "Unauthorized");
+
+  const resume = await prisma.resume.findFirst({
+    where: { userId },
+    include: { contact: true },
+  });
+
+  if (!resume || !resume.contact) {
+    throw createHttpError(404, "No contact found to delete");
+  }
+
+  await prisma.contact.delete({
+    where: { id: resume.contact.id },
+  });
+
+  res.status(200).json(new ApiResponse(200, {}, "Contact deleted successfully"));
+});
