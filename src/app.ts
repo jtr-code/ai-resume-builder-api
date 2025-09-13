@@ -23,6 +23,8 @@ import userRoutes from "./routes/user.route";
 import contactRoutes from "./routes/contact.route";
 import experienceRoutes from "./routes/experience.route";
 import educationRoutes from "./routes/education.route";
+import certificateRoutes from "./routes/certificate.route";
+import skillRoutes from "./routes/skill.route";
 
 // api routes
 app.use("/api/v1/health", healthRoutes);
@@ -30,6 +32,8 @@ app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/contact", contactRoutes);
 app.use("/api/v1/experience", experienceRoutes);
 app.use("/api/v1/education", educationRoutes);
+app.use("/api/v1/certificate", certificateRoutes);
+app.use("/api/v1/skill", skillRoutes);
 
 app.use(errorHandler);
 
