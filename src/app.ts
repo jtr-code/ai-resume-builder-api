@@ -25,6 +25,7 @@ import experienceRoutes from "./routes/experience.route";
 import educationRoutes from "./routes/education.route";
 import certificateRoutes from "./routes/certificate.route";
 import skillRoutes from "./routes/skill.route";
+import resumeRoutes from "./routes/resume.route";
 
 // api routes
 app.use("/api/v1/health", healthRoutes);
@@ -34,6 +35,7 @@ app.use("/api/v1/experience", experienceRoutes);
 app.use("/api/v1/education", educationRoutes);
 app.use("/api/v1/certificate", certificateRoutes);
 app.use("/api/v1/skill", skillRoutes);
+app.use("/api/v1/resume", resumeRoutes);
 
 app.use(errorHandler);
 
