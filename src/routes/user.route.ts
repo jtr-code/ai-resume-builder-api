@@ -39,7 +39,12 @@ router.post(
   validate,
   forgotPassword
 );
-router.patch("/reset-password", userResetForgottenPasswordValidator(), validate, resetPassword);
+router.patch(
+  "/reset-password/:token",
+  userResetForgottenPasswordValidator(),
+  validate,
+  resetPassword
+);
 
 // secured routes
 router.get("/", verifyJWT, getUser);
