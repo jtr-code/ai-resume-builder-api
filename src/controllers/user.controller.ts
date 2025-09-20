@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, User } from "@prisma/client";
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import expressAsyncHandler from "express-async-handler";
@@ -6,6 +6,10 @@ import createHttpError from "http-errors";
 import { ApiResponse } from "../utils/apiResponse";
 import jwt from "jsonwebtoken";
 import { generateAccessAndRefreshToken } from "../utils/generateAccessAndRefreshToken";
+
+interface AuthenticatedRequest extends Request {
+  user?: User;
+}
 
 const prisma = new PrismaClient();
 
@@ -136,7 +140,7 @@ export const loginUser = expressAsyncHandler(async (req: Request, res: Response)
     );
 });
 
-export const logoutUser = expressAsyncHandler(async (req: Request, res: Response) => {
+export const logoutUser = expressAsyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
   if (!userId) throw createHttpError(401, "Unauthorized");
 
@@ -206,12 +210,12 @@ export const forgotPassword = expressAsyncHandler(async (req: Request, res: Resp
     expiresIn: "15m",
   });
 
-  const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+  const resetLink = `${process.env.CLIENT_URL}/auth/reset-password/${resetToken}`;
 
   // TODO: send email using nodemailer/sendgrid/etc.
   console.log(" Reset link:", resetLink);
 
-  res.status(200).json(new ApiResponse(200, {}, "Reset link sent to email (mocked)"));
+  res.status(200).json(new ApiResponse(200, {}, `Reset link sent to ${email}`));
 });
 
 export const resetPassword = expressAsyncHandler(async (req: Request, res: Response) => {
@@ -240,58 +244,64 @@ export const resetPassword = expressAsyncHandler(async (req: Request, res: Respo
   }
 });
 
-export const changeCurrentPassword = expressAsyncHandler(async (req: Request, res: Response) => {
-  const { oldPassword, newPassword } = req.body;
-  const userId = req.user?.id;
+export const changeCurrentPassword = expressAsyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user?.id;
 
-  if (!oldPassword || !newPassword) {
-    throw createHttpError(400, "Old and new passwords are required");
+    if (!oldPassword || !newPassword) {
+      throw createHttpError(400, "Old and new passwords are required");
+    }
+
+    if (typeof newPassword !== "string" || newPassword.trim().length < 8) {
+      throw createHttpError(422, "Password must be a string and at least 8 characters long");
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw createHttpError(404, "User not found");
+
+    const isValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isValid) throw createHttpError(401, "Old password is incorrect");
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed },
+    });
+
+    res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"));
   }
+);
 
-  if (typeof newPassword !== "string" || newPassword.trim().length < 8) {
-    throw createHttpError(422, "Password must be a string and at least 8 characters long");
+export const updateAccountDetails = expressAsyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { name, email } = req.body;
+
+    if (!name && !email) {
+      throw createHttpError(422, "Please provide name and email");
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: name?.trim(),
+        email: email?.toLowerCase(),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+      },
+    });
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, { user: updatedUser }, "Account updated successfully"));
   }
-
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw createHttpError(404, "User not found");
-
-  const isValid = await bcrypt.compare(oldPassword, user.password);
-  if (!isValid) throw createHttpError(401, "Old password is incorrect");
-
-  const hashed = await bcrypt.hash(newPassword, 10);
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: { password: hashed },
-  });
-
-  res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"));
-});
-
-export const updateAccountDetails = expressAsyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
-  const { name, email } = req.body;
-
-  if (!name && !email) {
-    throw createHttpError(422, "Please provide name and email");
-  }
-
-  const updatedUser = await prisma.user.update({
-    where: { id: userId },
-    data: {
-      name: name?.trim(),
-      email: email?.toLowerCase(),
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      createdAt: true,
-    },
-  });
-
-  res.status(200).json(new ApiResponse(200, { user: updatedUser }, "Account updated successfully"));
-});
+);
 
 export const getUser = async (req: Request, res: Response) => {
   try {
