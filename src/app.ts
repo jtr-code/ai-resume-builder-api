@@ -44,4 +44,4 @@ app.use("/api/v1/resume", resumeRoutes);
 
 app.use(errorHandler);
 
-export { app };
+export default app;
