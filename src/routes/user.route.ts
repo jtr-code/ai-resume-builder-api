@@ -23,7 +23,9 @@ import {
   deleteUserById,
   changeCurrentPassword,
   updateAccountDetails,
+  uploadUserAvatar,
 } from "../controllers/user.controller";
+import { upload } from "../middlewares/multer.middleware";
 
 const router = Router();
 
@@ -51,6 +53,8 @@ router.get("/", verifyJWT, getUser);
 router.get("/:id", verifyJWT, getUserById);
 router.put("/:id", verifyJWT, updateUser);
 router.delete("/:id", verifyJWT, deleteUserById);
+
+router.post("/upload-avatar", verifyJWT, upload.single("avatar"), uploadUserAvatar);
 
 router.patch(
   "/change-password",

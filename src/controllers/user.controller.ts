@@ -6,6 +6,7 @@ import createHttpError from "http-errors";
 import { ApiResponse } from "../utils/apiResponse";
 import jwt from "jsonwebtoken";
 import { generateAccessAndRefreshToken } from "../utils/generateAccessAndRefreshToken";
+import { put } from "@vercel/blob";
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -368,6 +369,23 @@ export const getUserById = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const uploadUserAvatar = expressAsyncHandler(async (req: Request, res: Response) => {
+  const file = req.file;
+
+  if (!file) {
+    throw createHttpError(422, "Please provide an image");
+  }
+
+  const { originalname, buffer, mimetype } = file;
+
+  const { url } = await put(originalname, buffer, {
+    access: "public",
+    contentType: mimetype,
+  });
+
+  res.status(200).json(new ApiResponse(200, { url }, "Image uploaded successfully"));
+});
 
 export const updateUser = async (req: Request, res: Response) => {
   try {
