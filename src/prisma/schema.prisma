@@ -42,7 +42,7 @@ model Resume {
 
 model Contact {
   id        String   @id @default(uuid())
-  image     String
+  image     String?
   firstName String
   lastName  String
   jobTitle  String
