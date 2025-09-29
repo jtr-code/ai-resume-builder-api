@@ -381,6 +381,7 @@ export const uploadUserAvatar = expressAsyncHandler(async (req: Request, res: Re
 
   const { url } = await put(originalname, buffer, {
     access: "public",
+    addRandomSuffix: true,
     contentType: mimetype,
   });
 
