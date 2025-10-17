@@ -69,7 +69,7 @@ export const getExperiences = expressAsyncHandler(async (req: Request, res: Resp
   });
 
   if (!resume || resume.experiences.length === 0) {
-    throw createHttpError(404, "No experiences found");
+    throw createHttpError(200, "No experiences found");
   }
 
   res

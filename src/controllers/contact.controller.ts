@@ -98,7 +98,7 @@ export const getContactDetails = expressAsyncHandler(async (req: Request, res: R
   });
 
   if (!resume || !resume.contact) {
-    throw createHttpError(404, "No contact found");
+    throw createHttpError(200, "No contact found");
   }
 
   res.status(200).json(new ApiResponse(200, resume.contact, "Contact retrieved successfully"));
